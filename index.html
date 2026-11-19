@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ekart Courier | Track a Shipment</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --warning: #d97706;
+      --error: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      background-color: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: inherit;
+      font-weight: 500;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    /* Hero / Search Section */
+    .hero {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: white;
+      padding: 4.5rem 1.5rem;
+      text-align: center;
+    }
+
+    .hero > :not(.hero-photo) {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-photo {
+      position: absolute;
+      z-index: -1;
+      display: block;
+      object-fit: cover;
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      box-shadow: 0 16px 40px rgba(2, 6, 23, 0.25);
+      opacity: 0.78;
+      pointer-events: none;
+    }
+
+    .hero-truck {
+      left: max(1.5rem, calc(50% - 560px));
+      top: 50%;
+      width: clamp(150px, 20vw, 260px);
+      height: 170px;
+      transform: translateY(-50%) rotate(-3deg);
+    }
+
+    .hero-parcels {
+      right: max(1.5rem, calc(50% - 560px));
+      top: 50%;
+      width: clamp(135px, 17vw, 220px);
+      height: 190px;
+      transform: translateY(-50%) rotate(3deg);
+    }
+
+    .hero h1 {
+      font-size: 2.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero p {
+      color: #dbeafe;
+      max-width: 550px;
+      margin: 0 auto 2rem;
+    }
+
+    .search-box {
+      max-width: 600px;
+      margin: 0 auto;
+      display: flex;
+      background: white;
+      padding: 0.4rem;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      padding: 0.85rem 1rem;
+      font-size: 1rem;
+      outline: none;
+      border-radius: 8px;
+      color: var(--text-main);
+    }
+
+    .search-box button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.85rem 1.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .search-box button:hover {
+      background-color: var(--primary-dark);
+    }
+
+    .demo-chips {
+      margin-top: 1.25rem;
+      font-size: 0.85rem;
+      color: #dbeafe;
+    }
+
+    .demo-chips span {
+      background: rgba(255, 255, 255, 0.18);
+      padding: 0.25rem 0.65rem;
+      border-radius: 20px;
+      cursor: pointer;
+      margin: 0 0.25rem;
+      display: inline-block;
+      transition: background 0.2s;
+    }
+
+    .demo-chips span:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      max-width: 850px;
+      width: 100%;
+      margin: -2rem auto 3rem;
+      padding: 0 1.5rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--border);
+      padding: 2rem;
+      display: none;
+    }
+
+    .card.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Error Box */
+    .error-msg {
+      text-align: center;
+      color: var(--error);
+      padding: 1rem;
+    }
+
+    /* Shipment Summary Header */
+    .shipment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tracking-id-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .tracking-id-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .badge {
+      padding: 0.4rem 0.9rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .badge.delivered { background: #dcfce7; color: var(--success); }
+    .badge.transit { background: #dbeafe; color: var(--primary); }
+    .badge.exception { background: #fef3c7; color: var(--warning); }
+
+    .shipment-badges {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    .verified-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid #86efac;
+      border-radius: 20px;
+      background: #dcfce7;
+      color: #15803d;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .info-item .address-value {
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+    }
+
+    .verified-badge[hidden] {
+      display: none;
+    }
+
+    .delay-notice {
+      margin-top: 1rem;
+      padding: 0.6rem 0.8rem;
+      border-left: 3px solid #dc2626;
+      border-radius: 4px;
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .delay-notice[hidden] {
+      display: none;
+    }
+
+    .delay-notice-label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+    }
+
+    .delay-notice-message {
+      margin: 0.1rem 0 0;
+      font-size: 0.82rem;
+      font-weight: 600;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+      white-space: pre-line;
+    }
+
+    /* Progress Bar */
+    .progress-wrapper {
+      margin: 2rem 0;
+      padding: 1.25rem;
+      border-radius: 8px;
+      background: var(--bg);
+    }
+
+    .progress-steps {
+      display: grid;
+      position: relative;
+      gap: 0.8rem;
+    }
+
+    .progress-steps::before {
+      content: "";
+      position: absolute;
+      top: 16px;
+      bottom: 16px;
+      left: 14px;
+      width: 4px;
+      border-radius: 4px;
+      background: var(--border);
+    }
+
+    .progress-bar-fill {
+      position: absolute;
+      top: 16px;
+      left: 14px;
+      width: 4px;
+      height: 0;
+      border-radius: 4px;
+      background: var(--primary);
+      transition: height 0.4s ease;
+    }
+
+    .step {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      column-gap: 0.8rem;
+      align-items: start;
+      min-height: 48px;
+    }
+
+    .step-circle {
+      grid-row: 1 / 3;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: white;
+      border: 3px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+      color: transparent;
+    }
+
+    .step.completed .step-circle {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+
+    .step-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .step.completed .step-label {
+      color: var(--text-main);
+    }
+
+    .step-time {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    /* Info Grid */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.25rem;
+      background: var(--bg);
+      padding: 1.25rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+    }
+
+    .info-item small {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .info-item strong {
+      font-size: 0.95rem;
+    }
+
+    .order-id-item {
+      padding: 0.7rem;
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      background: #eff6ff;
+    }
+
+    .timeline-title {
+      font-size: 1.1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      background: white;
+    }
+
+    @media (max-width: 600px) {
+      .search-box { flex-direction: column; }
+      .search-box button { width: 100%; margin-top: 0.5rem; }
+      .nav-links { display: flex; gap: 0.75rem; }
+      .hero { padding: 3.5rem 1rem; }
+      .hero-photo { opacity: 0.22; width: 120px; height: 145px; }
+      .hero-truck { left: -1.5rem; }
+      .hero-parcels { right: -1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">📦 Ekart Courier</div>
+    <nav class="nav-links">
+      <a href="index.html">Track</a>
+      <a href="admin.html">Admin</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <img class="hero-photo hero-truck" src="assets/courier-truck.jpg" alt="" aria-hidden="true" />
+    <img class="hero-photo hero-parcels" src="assets/parcel-boxes.jpg" alt="" aria-hidden="true" />
+    <h1>Track Your Shipment</h1>
+    <p>Enter your tracking ID to see the latest shipment status and delivery details.</p>
+    
+    <form class="search-box" id="trackForm">
+      <input 
+        type="text" 
+        id="trackingInput" 
+        placeholder="Enter tracking ID (e.g., EK1001)"
+        required 
+      />
+      <button type="submit">Track</button>
+    </form>
+
+    <div class="demo-chips">
+      Sample IDs:
+      <span onclick="quickTrack('EK1001')">EK1001 (In Transit)</span>
+      <span onclick="quickTrack('EK2002')">EK2002 (Delivered)</span>
+      <span onclick="quickTrack('EK3003')">EK3003 (Delayed)</span>
+    </div>
+  </section>
+
+  <main>
+    <!-- Result Card -->
+    <div class="card" id="resultCard">
+      <div class="shipment-header">
+        <div>
+          <div class="tracking-id-label">Tracking Number</div>
+          <div class="tracking-id-value" id="resId">--</div>
+        </div>
+        <div class="shipment-badges">
+          <span class="verified-badge" id="verifiedBadge" hidden>
+            <span aria-hidden="true">✓</span> Real Item in Package
+          </span>
+          <span class="badge" id="resBadge">--</span>
+        </div>
+      </div>
+
+      <section class="delay-notice" id="delayNotice" aria-live="polite" hidden>
+        <span class="delay-notice-label">DELAYED</span>
+        <p class="delay-notice-message" id="delayMessageText"></p>
+      </section>
+
+      <div class="progress-wrapper" aria-label="Shipment progress">
+        <div class="progress-steps" id="progressSteps">
+          <div class="progress-bar-fill" id="progressFill"></div>
+          <div class="step" id="step1" data-milestone="orderPlaced">
+            <div class="step-circle" aria-hidden="true"></div>
+            <div class="step-label">Order Placed</div>
+            <time class="step-time" id="stepTime1">Pending</time>
+          </div>
+          <div class="step" id="step2" data-milestone="pickedUp">
+            <div class="step-circle" aria-hidden="true"></div>
+            <div class="step-label">Picked Up</div>
+            <time class="step-time" id="stepTime2">Pending</time>
+          </div>
+          <div class="step" id="step3" data-milestone="motherHub">
+            <div class="step-circle" aria-hidden="true"></div>
+            <div class="step-label">Reached Mother Hub</div>
+            <time class="step-time" id="stepTime3">Pending</time>
+          </div>
+          <div class="step" id="step4" data-milestone="leftDestination">
+            <div class="step-circle" aria-hidden="true"></div>
+            <div class="step-label">Left Destination</div>
+            <time class="step-time" id="stepTime4">Pending</time>
+          </div>
+          <div class="step" id="step5" data-milestone="inTransit">
+            <div class="step-circle" aria-hidden="true"></div>
+            <div class="step-label">In Transit</div>
+            <time class="step-time" id="stepTime5">Pending</time>
+          </div>
+          <div class="step" id="step6" data-milestone="destinationReached">
+            <div class="step-circle" aria-hidden="true"></div>
+            <div class="step-label">Reached Destination</div>
+            <time class="step-time" id="stepTime6">Pending</time>
+          </div>
+          <div class="step" id="step7" data-milestone="outForDelivery">
+            <div class="step-circle" aria-hidden="true"></div>
+            <div class="step-label">Out for Delivery</div>
+            <time class="step-time" id="stepTime7">Pending</time>
+          </div>
+          <div class="step" id="step8" data-milestone="delivered">
+            <div class="step-circle" aria-hidden="true"></div>
+            <div class="step-label">Delivered</div>
+            <time class="step-time" id="stepTime8">Pending</time>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shipment Details -->
+      <h3 class="timeline-title">Shipment &amp; Order Details</h3>
+      <div class="info-grid">
+        <div class="info-item order-id-item">
+          <small>Order ID</small>
+          <strong id="resOrderId">--</strong>
+        </div>
+        <div class="info-item">
+          <small>Buyer / Recipient</small>
+          <strong id="resBuyer">--</strong>
+        </div>
+        <div class="info-item">
+          <small>Customer Who Placed Order</small>
+          <strong id="resCustomer">--</strong>
+        </div>
+        <div class="info-item">
+          <small>Package Contents</small>
+          <strong id="resItem">--</strong>
+        </div>
+        <div class="info-item">
+          <small>Full Delivery Address</small>
+          <strong class="address-value" id="resDeliveryAddress">--</strong>
+        </div>
+        <div class="info-item">
+          <small>Delivery Date</small>
+          <strong id="resEta">--</strong>
+        </div>
+        <div class="info-item">
+          <small>Origin</small>
+          <strong id="resOrigin">--</strong>
+        </div>
+        <div class="info-item">
+          <small>Destination</small>
+          <strong id="resDest">--</strong>
+        </div>
+        <div class="info-item">
+          <small>Service / Weight</small>
+          <strong id="resService">--</strong>
+        </div>
+        <div class="info-item">
+          <small>Courier Charge</small>
+          <strong id="resCourierCharge">--</strong>
+        </div>
+        <div class="info-item">
+          <small>Insurance Charge</small>
+          <strong id="resInsuranceCharge">--</strong>
+        </div>
+        <div class="info-item">
+          <small>Total Amount</small>
+          <strong id="resTotalAmount">--</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Not Found Card -->
+    <div class="card" id="errorCard">
+      <div class="error-msg">
+        <h3>Tracking Number Not Found</h3>
+        <p>We couldn't find a shipment matching that ID. Check it and try again.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 Ekart Courier. All rights reserved.
+  </footer>
+
+  <script src="shipments.js"></script>
+  <script>
+    const form = document.getElementById("trackForm");
+    const input = document.getElementById("trackingInput");
+    const resultCard = document.getElementById("resultCard");
+    const errorCard = document.getElementById("errorCard");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      trackPackage(input.value.trim().toUpperCase());
+    });
+
+    function quickTrack(id) {
+      input.value = id;
+      trackPackage(id);
+    }
+
+    window.addEventListener("storage", event => {
+      if (event.key !== "ekartCourierShipments") return;
+      const currentId = input.value.trim().toUpperCase();
+      if (currentId) trackPackage(currentId);
+    });
+
+    function trackPackage(id) {
+      let data;
+      try {
+        data = EkartShipments.load()[id];
+      } catch (error) {
+        resultCard.classList.remove("active");
+        errorCard.classList.add("active");
+        errorCard.querySelector("h3").textContent = "Unable to Load Shipments";
+        errorCard.querySelector("p").textContent = error.message;
+        return;
+      }
+
+      if (!data) {
+        resultCard.classList.remove("active");
+        errorCard.classList.add("active");
+        errorCard.querySelector("h3").textContent = "Tracking Number Not Found";
+        errorCard.querySelector("p").textContent = "We couldn't find a shipment matching that ID. Check it and try again.";
+        return;
+      }
+
+      errorCard.classList.remove("active");
+      resultCard.classList.add("active");
+
+      // Populate Header & Grid
+      document.getElementById("resId").textContent = id;
+      const badge = document.getElementById("resBadge");
+      badge.textContent = data.status;
+      badge.className = `badge ${data.badgeClass}`;
+      document.getElementById("verifiedBadge").hidden = data.itemVerified !== true;
+      const delayNotice = document.getElementById("delayNotice");
+      const isDelayed = typeof data.status === "string" && data.status.trim().toLowerCase().includes("delay");
+      const delayMessageEnabled = data.delayMessageEnabled !== false
+        && String(data.delayMessageEnabled).toLowerCase() !== "no";
+      delayNotice.hidden = !isDelayed || !delayMessageEnabled;
+      document.getElementById("delayMessageText").textContent = data.delayMessage
+        || "Your shipment is delayed. Please check back for updates.";
+
+      document.getElementById("resEta").textContent = data.eta;
+      document.getElementById("resOrderId").textContent = data.orderId || "Not provided";
+      document.getElementById("resBuyer").textContent = data.buyerName || "Not provided";
+      document.getElementById("resCustomer").textContent = data.customerName || "Not provided";
+      document.getElementById("resItem").textContent = data.orderItem || "Not provided";
+      document.getElementById("resDeliveryAddress").textContent = data.deliveryAddress || "Not provided";
+      document.getElementById("resOrigin").textContent = data.origin;
+      document.getElementById("resDest").textContent = data.destination;
+      const deliveryOptionLabel = data.deliveryOption === "fast" ? "Fast Delivery" : "Standard Delivery";
+      document.getElementById("resService").textContent = deliveryOptionLabel + " · " + (data.service || "Not provided");
+      const courierCharge = Number.isFinite(data.charge) ? data.charge : null;
+      const insuranceCharge = Number.isFinite(data.insuranceCharge) ? data.insuranceCharge : 0;
+      const totalAmount = Number.isFinite(data.totalCharge)
+        ? data.totalCharge
+        : courierCharge === null
+          ? null
+          : courierCharge + insuranceCharge;
+      const formatAmount = amount => amount === null
+        ? "Not available"
+        : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount);
+      document.getElementById("resCourierCharge").textContent = formatAmount(courierCharge);
+      document.getElementById("resInsuranceCharge").textContent = formatAmount(insuranceCharge);
+      document.getElementById("resTotalAmount").textContent = formatAmount(totalAmount);
+
+      const milestoneDates = EkartShipments.getMilestoneDates(data);
+      let lastReachedIndex = -1;
+      EkartShipments.milestones.forEach((milestone, index) => {
+        const stepEl = document.getElementById(`step${index + 1}`);
+        const dateEl = document.getElementById(`stepTime${index + 1}`);
+        const dateValue = milestoneDates[milestone.id];
+        const date = dateValue ? new Date(String(dateValue).replace(/\s•\s/g, " ")) : null;
+        const hasDate = date && Number.isFinite(date.getTime());
+        const isReached = hasDate && date.getTime() <= Date.now();
+        stepEl.classList.toggle("completed", isReached);
+        stepEl.querySelector(".step-circle").textContent = isReached ? "✓" : "";
+        dateEl.textContent = hasDate
+          ? date.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+          : "Pending";
+        if (hasDate) dateEl.dateTime = date.toISOString();
+        else dateEl.removeAttribute("datetime");
+        if (isReached) lastReachedIndex = index;
+      });
+
+      const progressFill = document.getElementById("progressFill");
+      const lastReachedStep = lastReachedIndex >= 0
+        ? document.getElementById(`step${lastReachedIndex + 1}`)
+        : null;
+      progressFill.style.height = lastReachedStep ? lastReachedStep.offsetTop + "px" : "0";
+    }
+  </script>
+</body>
+</html>

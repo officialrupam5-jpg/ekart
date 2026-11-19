@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ekart Courier | Shipment Admin</title>
+  <script>
+    if (sessionStorage.getItem("ekartAdminAuthenticated") !== "true") {
+      window.location.replace("admin-login.html");
+    }
+  </script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #f8fafc;
+      --card: #fff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --danger: #b91c1c;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { position: relative; margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
+    body::before {
+      content: "";
+      position: fixed;
+      z-index: 0;
+      inset: 0;
+      background-image: url("assets/courier-truck.jpg"), url("assets/parcel-boxes.jpg");
+      background-repeat: no-repeat;
+      background-position: left bottom, right bottom;
+      background-size: min(38vw, 520px) auto, min(30vw, 400px) auto;
+      opacity: .09;
+      pointer-events: none;
+    }
+    header { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: var(--card); border-bottom: 1px solid var(--border); }
+    .logo { font-size: 1.25rem; font-weight: 800; color: var(--primary); }
+    a { color: var(--primary); text-decoration: none; font-weight: 600; }
+    .header-actions { display: flex; align-items: center; gap: 1rem; }
+    .logout-button { border: 0; border-radius: 7px; padding: .55rem .8rem; background: #e2e8f0; color: var(--text); font-weight: 700; cursor: pointer; }
+    main { position: relative; z-index: 1; max-width: 1050px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin: 0 0 .4rem; font-size: 1.8rem; }
+    .intro, .hint { color: var(--muted); }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, .75fr); gap: 1rem; align-items: start; }
+    .panel { padding: 1.25rem; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.04); }
+    .panel h2 { margin: 0 0 1rem; font-size: 1.15rem; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
+    label { display: block; font-size: .88rem; font-weight: 650; }
+    input, select, textarea { width: 100%; margin-top: .3rem; padding: .7rem .75rem; border: 1px solid #cbd5e1; border-radius: 7px; color: var(--text); font-size: .95rem; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #93c5fd; border-color: var(--primary); }
+    textarea { min-height: 5rem; resize: vertical; }
+    .insurance-selector { display: flex; align-items: center; gap: .5rem; }
+    .insurance-selector input { width: auto; margin: 0; accent-color: var(--primary); }
+    .charge-summary { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .3rem .75rem; padding: .7rem .85rem; border-radius: 7px; background: #eff6ff; color: #1e3a8a; }
+    .charge-summary span { font-size: .82rem; }
+    .charge-summary strong { font-size: .95rem; text-align: right; }
+    .charge-summary #calculatedCharge { padding-top: .35rem; border-top: 1px solid #bfdbfe; font-size: 1.1rem; }
+    .full { grid-column: 1 / -1; }
+    .milestone-help { margin: -.5rem 0 .75rem; color: var(--muted); font-size: .85rem; }
+    .milestone-date-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    .field-help { display: block; margin-top: .25rem; color: var(--muted); font-size: .78rem; font-weight: 400; }
+    .actions { display: flex; gap: .6rem; margin-top: 1rem; }
+    button { border: 0; border-radius: 7px; padding: .7rem 1rem; background: var(--primary); color: white; font-weight: 700; cursor: pointer; }
+    button:hover { background: var(--primary-dark); }
+    button.secondary { background: #e2e8f0; color: var(--text); }
+    .message { min-height: 1.5rem; margin-top: .75rem; font-size: .9rem; }
+    .message.error { color: var(--danger); }
+    .shipment-list { display: grid; gap: .65rem; }
+    .shipment-item { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .75rem; border: 1px solid var(--border); border-radius: 8px; }
+    .shipment-item small { display: block; color: var(--muted); }
+    .shipment-delay-message { max-width: 250px; margin-top: .2rem; color: #b91c1c !important; font-size: .76rem; overflow-wrap: anywhere; }
+    .shipment-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .shipment-item button { padding: .45rem .7rem; }
+    .receipt-panel { margin-top: 1rem; }
+    .receipt-controls { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    .receipt-help { color: var(--muted); font-size: .9rem; }
+    .receipt-paper { max-width: 760px; margin: 1rem auto 0; padding: 1.5rem; border: 1px solid var(--border); background: white; color: #0f172a; }
+    .receipt-heading { display: flex; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #0f172a; }
+    .receipt-heading h2, .receipt-heading p { margin: 0; }
+    .receipt-awb { text-align: right; }
+    .receipt-awb small, .receipt-awb strong { display: block; }
+    .receipt-awb strong { font-size: 1.25rem; letter-spacing: .04em; overflow-wrap: anywhere; }
+    .receipt-order-box { display: inline-flex; flex-direction: column; min-width: 220px; max-width: 100%; margin-top: .9rem; padding: .6rem .8rem; border: 2px solid #0f172a; border-radius: 6px; }
+    .receipt-order-box small { color: var(--muted); font-size: .75rem; font-weight: 700; text-transform: uppercase; }
+    .receipt-order-box strong { font-size: 1.1rem; overflow-wrap: anywhere; }
+    #receiptBarcode { display: block; width: auto; max-width: 100%; height: auto; max-height: 90px; margin: 1rem auto; }
+    .receipt-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 1.2rem; }
+    .receipt-columns section { min-width: 0; }
+    .receipt-columns h3 { margin: 0 0 .5rem; font-size: 1rem; }
+    .receipt-address { margin: .35rem 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+    .receipt-data { margin: 0; }
+    .receipt-data div { display: flex; justify-content: space-between; gap: .75rem; padding: .25rem 0; border-bottom: 1px solid #e2e8f0; }
+    .receipt-data dt { color: var(--muted); }
+    .receipt-data dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+    .receipt-total { margin-top: 1rem; padding-top: .75rem; border-top: 2px solid #0f172a; text-align: right; font-size: 1.2rem; font-weight: 800; }
+    .receipt-foot { margin: 1rem 0 0; color: var(--muted); font-size: .8rem; text-align: center; }
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body { background: white; }
+      body::before, body > header, body > main > h1, body > main > .intro, body > main > .layout { display: none !important; }
+      body > main { max-width: none; margin: 0; padding: 0; }
+      .receipt-panel[hidden] { display: none !important; }
+      .receipt-panel:not([hidden]) { display: block; position: absolute; inset: 0; width: 100%; margin: 0; padding: 0; border: 0; box-shadow: none; background: white; }
+      .receipt-controls, .receipt-help { display: none !important; }
+      .receipt-paper { max-width: none; margin: 0; padding: 0; border: 0; }
+    }
+    @media (max-width: 700px) { body::before { background-size: 58vw auto, 45vw auto; opacity: .06; } .layout { grid-template-columns: 1fr; } header { padding: 1rem; } .fields, .milestone-date-grid { grid-template-columns: 1fr; } .full { grid-column: auto; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">📦 Ekart Courier — Admin</div>
+    <div class="header-actions">
+      <a href="index.html">Public tracking page</a>
+      <button class="logout-button" id="logoutButton" type="button">Log out</button>
+    </div>
+  </header>
+  <main>
+    <h1>Manage shipments</h1>
+    <p class="intro">Create a tracking ID or add a new update to an existing shipment.</p>
+    <div class="layout">
+      <section class="panel">
+        <h2 id="formTitle">Create shipment</h2>
+        <form id="shipmentForm">
+          <div class="fields">
+            <label>Tracking ID (leave blank to generate)
+              <input id="trackingId" maxlength="32" placeholder="e.g. EK12345678" autocomplete="off" />
+            </label>
+            <label>Order ID
+              <input id="orderId" maxlength="40" required placeholder="e.g. ORD-2026-001" autocomplete="off" />
+            </label>
+            <label>Status
+              <select id="status" required>
+                <option>Order Placed</option>
+                <option>Picked Up</option>
+                <option>Reached Mother Hub</option>
+                <option>Left Destination</option>
+                <option>In Transit</option>
+                <option>Reached Destination</option>
+                <option>Out for Delivery</option>
+                <option>Delivered</option>
+                <option>Delayed</option>
+              </select>
+            </label>
+            <label class="full">Delayed message shown on the tracking page
+              <textarea id="delayMessage" maxlength="300" placeholder="e.g. Delivery is delayed due to weather. We are working to move your shipment as soon as possible."></textarea>
+            </label>
+            <label>Show delayed message on tracking page?
+              <select id="delayMessageEnabled">
+                <option value="yes" selected>Yes</option>
+                <option value="no">No</option>
+              </select>
+              <small class="field-help">Choose Yes to display the red message. No hides it from tracking.</small>
+            </label>
+            <label>Buyer / recipient name
+              <input id="buyerName" maxlength="100" required placeholder="Buyer or recipient name" />
+            </label>
+            <label>Customer who placed the order
+              <input id="customerName" maxlength="100" required placeholder="Customer name" />
+            </label>
+            <label>Customer phone number
+              <input id="customerPhone" type="tel" maxlength="20" required autocomplete="tel" placeholder="e.g. +91 98765 43210" />
+            </label>
+            <label>Seller / sender name
+              <input id="sellerName" maxlength="100" required placeholder="Business or sender name" />
+            </label>
+            <label>Package contents
+              <input id="orderItem" maxlength="160" required placeholder="e.g. Books, clothing" />
+            </label>
+            <label>Is the described real item in the package?
+              <select id="itemVerified" required>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+            <label>Origin
+              <input id="origin" maxlength="100" required placeholder="City, State" />
+            </label>
+            <label>Destination
+              <input id="destination" maxlength="100" required placeholder="City, State" />
+            </label>
+            <label class="full">Full delivery address
+              <textarea id="deliveryAddress" maxlength="400" required autocomplete="street-address" placeholder="Street address, building, apartment, city, state, postal code, country"></textarea>
+            </label>
+            <label class="full">Full seller / sender address
+              <textarea id="sellerAddress" maxlength="400" required placeholder="Street address, building, city, state, postal code, country"></textarea>
+            </label>
+            <label>Estimated delivery
+              <input id="eta" maxlength="100" required placeholder="e.g. Nov 25, 2026" />
+            </label>
+            <label>Delivery option
+              <select id="deliveryOption" required>
+                <option value="standard">Standard Delivery (₹79 / kg)</option>
+                <option value="fast">Fast Delivery (₹170 / kg)</option>
+              </select>
+            </label>
+            <label>Courier service
+              <input id="service" maxlength="100" required placeholder="e.g. Express Air" />
+            </label>
+            <label>Package weight (kg)
+              <input id="weight" type="number" min="0.01" step="0.01" required placeholder="e.g. 2.5" />
+            </label>
+            <label class="insurance-selector full">
+              <input id="insurance" type="checkbox" />
+              Add shipment insurance (₹30 / kg)
+            </label>
+            <div class="charge-summary" aria-live="polite">
+              <span id="courierRateLabel">Courier charge (Standard Delivery, ₹79 / kg)</span>
+              <strong id="courierCharge">—</strong>
+              <span>Insurance charge (₹30 / kg)</span>
+              <strong id="insuranceCharge">—</strong>
+              <span>Total shipment charges</span>
+              <strong id="calculatedCharge">—</strong>
+            </div>
+            <section class="full milestone-date-section">
+              <h3>Tracking Milestone Dates</h3>
+              <p class="milestone-help">Enter the date and time when each milestone is reached. Leave future milestones blank.</p>
+              <div class="milestone-date-grid">
+                <label>Order Placed
+                  <input id="orderPlacedAt" type="datetime-local" required />
+                </label>
+                <label>Picked Up
+                  <input id="milestonePickedUp" type="datetime-local" />
+                </label>
+                <label>Reached Mother Hub
+                  <input id="milestoneMotherHub" type="datetime-local" />
+                </label>
+                <label>Left Destination
+                  <input id="milestoneLeftDestination" type="datetime-local" />
+                </label>
+                <label>In Transit
+                  <input id="milestoneInTransit" type="datetime-local" />
+                </label>
+                <label>Reached Destination
+                  <input id="milestoneDestinationReached" type="datetime-local" />
+                </label>
+                <label>Out for Delivery
+                  <input id="milestoneOutForDelivery" type="datetime-local" />
+                </label>
+                <label>Delivered
+                  <input id="milestoneDelivered" type="datetime-local" />
+                </label>
+              </div>
+            </section>
+          </div>
+          <div class="actions">
+            <button type="submit" id="saveButton">Save shipment</button>
+            <button type="button" class="secondary" id="clearButton">New shipment</button>
+          </div>
+          <div class="message" id="message" role="status" aria-live="polite"></div>
+        </form>
+      </section>
+      <aside class="panel">
+        <h2>Existing shipments</h2>
+        <p class="hint">Select a shipment to add an update or change its details.</p>
+        <div class="shipment-list" id="shipmentList"></div>
+      </aside>
+    </div>
+    <section class="panel receipt-panel" id="receiptPanel" hidden>
+      <div class="receipt-controls">
+        <h2>Courier Tracking Receipt</h2>
+        <button id="printReceiptButton" type="button">Print / Save as PDF</button>
+      </div>
+      <p class="receipt-help">To save a PDF, choose “Save as PDF” in the print dialog.</p>
+      <div class="receipt-paper">
+        <div class="receipt-heading">
+          <div>
+            <h2>Ekart Courier</h2>
+            <p>Shipment Receipt</p>
+          </div>
+          <div class="receipt-awb">
+            <small>AWB / Tracking Number</small>
+            <strong id="receiptTrackingId">--</strong>
+          </div>
+        </div>
+        <div class="receipt-order-box">
+          <small>Order ID</small>
+          <strong id="receiptOrderId">--</strong>
+        </div>
+        <svg id="receiptBarcode" role="img" aria-label="AWB barcode"></svg>
+        <div class="receipt-columns">
+          <section>
+            <h3>Seller / Sender</h3>
+            <strong id="receiptSellerName">--</strong>
+            <p class="receipt-address" id="receiptSellerAddress"></p>
+          </section>
+          <section>
+            <h3>Deliver To</h3>
+            <strong id="receiptRecipient">--</strong>
+            <p class="receipt-address" id="receiptDeliveryAddress"></p>
+          </section>
+        </div>
+        <div class="receipt-columns">
+          <section>
+            <h3>Order Information</h3>
+            <dl class="receipt-data">
+              <div><dt>Order placed by</dt><dd id="receiptCustomerName">--</dd></div>
+              <div><dt>Customer phone</dt><dd id="receiptCustomerPhone">--</dd></div>
+              <div><dt>Package contents</dt><dd id="receiptOrderItem">--</dd></div>
+              <div><dt>Real item in package</dt><dd id="receiptItemVerified">--</dd></div>
+            </dl>
+          </section>
+          <section>
+            <h3>Shipment Information</h3>
+            <dl class="receipt-data">
+              <div><dt>Status</dt><dd id="receiptStatus">--</dd></div>
+              <div><dt>Delivery date</dt><dd id="receiptEta">--</dd></div>
+              <div><dt>Service</dt><dd id="receiptService">--</dd></div>
+              <div><dt>Weight</dt><dd id="receiptWeight">--</dd></div>
+              <div><dt>Origin / destination</dt><dd id="receiptRoute">--</dd></div>
+            </dl>
+          </section>
+        </div>
+        <div class="receipt-columns">
+          <section>
+            <h3>Charges</h3>
+            <dl class="receipt-data">
+              <div><dt>Courier charge</dt><dd id="receiptCourierCharge">--</dd></div>
+              <div><dt>Insurance charge</dt><dd id="receiptInsuranceCharge">--</dd></div>
+            </dl>
+          </section>
+          <div class="receipt-total">Total: <span id="receiptTotal">--</span></div>
+        </div>
+        <p class="receipt-foot">Keep this receipt for shipment reference.</p>
+      </div>
+    </section>
+  </main>
+  <script src="assets/JsBarcode.all.min.js"></script>
+  <script src="shipments.js"></script>
+  <script>
+    const RATE_PER_KG = 79;
+    const FAST_RATE_PER_KG = 170;
+    const INSURANCE_RATE_PER_KG = 30;
+    const currencyFormatter = new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR"
+    });
+    const statusSteps = {
+      "Order Placed": 1,
+      "Picked Up": 2,
+      "Reached Mother Hub": 3,
+      "Left Destination": 4,
+      "In Transit": 5,
+      "Reached Destination": 6,
+      "Out for Delivery": 7,
+      "Delivered": 8,
+      "Delayed": 5
+    };
+    const milestoneDateFields = [
+      { inputId: "milestonePickedUp", milestoneId: "pickedUp", label: "Picked Up" },
+      { inputId: "milestoneMotherHub", milestoneId: "motherHub", label: "Reached Mother Hub" },
+      { inputId: "milestoneLeftDestination", milestoneId: "leftDestination", label: "Left Destination" },
+      { inputId: "milestoneInTransit", milestoneId: "inTransit", label: "In Transit" },
+      { inputId: "milestoneDestinationReached", milestoneId: "destinationReached", label: "Reached Destination" },
+      { inputId: "milestoneOutForDelivery", milestoneId: "outForDelivery", label: "Out for Delivery" },
+      { inputId: "milestoneDelivered", milestoneId: "delivered", label: "Delivered" }
+    ];
+    const form = document.getElementById("shipmentForm");
+    const message = document.getElementById("message");
+    const input = id => document.getElementById(id);
+
+    function getCourierRate() {
+      return input("deliveryOption").value === "fast" ? FAST_RATE_PER_KG : RATE_PER_KG;
+    }
+
+    function getDeliveryOptionLabel(deliveryOption) {
+      return deliveryOption === "fast" ? "Fast Delivery" : "Standard Delivery";
+    }
+
+    function updateCharge() {
+      const weightValue = input("weight").value;
+      const weight = Number(weightValue);
+      const ratePerKg = getCourierRate();
+      const courierCharge = weight * ratePerKg;
+      const insuranceCharge = input("insurance").checked
+        ? weight * INSURANCE_RATE_PER_KG
+        : 0;
+      const totalCharge = courierCharge + insuranceCharge;
+      const valid = weightValue && Number.isFinite(totalCharge) && weight > 0;
+      input("courierRateLabel").textContent = "Courier charge ("
+        + getDeliveryOptionLabel(input("deliveryOption").value)
+        + ", ₹" + ratePerKg + " / kg)";
+      input("courierCharge").textContent = valid
+        ? currencyFormatter.format(courierCharge)
+        : "—";
+      input("insuranceCharge").textContent = valid
+        ? currencyFormatter.format(insuranceCharge)
+        : "—";
+      input("calculatedCharge").textContent = valid
+        ? currencyFormatter.format(totalCharge)
+        : "—";
+    }
+
+    function getShipments() {
+      return EkartShipments.load();
+    }
+
+    function setMessage(text, isError) {
+      message.textContent = text;
+      message.className = isError ? "message error" : "message";
+    }
+
+    function getShipmentCharge(shipment) {
+      if (Number.isFinite(shipment.charge)) return shipment.charge;
+      const weightMatch = typeof shipment.service === "string"
+        ? shipment.service.match(/([\d.]+)\s*kg/i)
+        : null;
+      if (!weightMatch) return null;
+      const ratePerKg = Number.isFinite(shipment.ratePerKg)
+        ? shipment.ratePerKg
+        : shipment.deliveryOption === "fast"
+          ? FAST_RATE_PER_KG
+          : RATE_PER_KG;
+      const charge = Number(weightMatch[1]) * ratePerKg;
+      return Number.isFinite(charge) ? Number(charge.toFixed(2)) : null;
+    }
+
+    function toDateTimeInput(value) {
+      const source = value instanceof Date
+        ? value
+        : new Date(String(value).replace(/\s•\s/g, " "));
+      if (!Number.isFinite(source.getTime())) return "";
+      return new Date(source.getTime() - source.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+    }
+
+    function populateMilestoneDates(shipment) {
+      const dates = EkartShipments.getMilestoneDates(shipment);
+      input("orderPlacedAt").value = toDateTimeInput(dates.orderPlaced || "");
+      milestoneDateFields.forEach(field => {
+        input(field.inputId).value = toDateTimeInput(dates[field.milestoneId] || "");
+      });
+    }
+
+    function collectMilestoneDates(orderPlacedDateTime) {
+      const dates = { orderPlaced: orderPlacedDateTime.toISOString() };
+      for (const field of milestoneDateFields) {
+        const value = input(field.inputId).value;
+        if (!value) {
+          dates[field.milestoneId] = "";
+          continue;
+        }
+        const date = new Date(value);
+        if (!Number.isFinite(date.getTime())) {
+          setMessage("Enter a valid date and time for " + field.label + ".", true);
+          return null;
+        }
+        dates[field.milestoneId] = date.toISOString();
+      }
+      return dates;
+    }
+
+    function resetForm() {
+      form.reset();
+      input("trackingId").readOnly = false;
+      input("formTitle").textContent = "Create shipment";
+      input("saveButton").textContent = "Save shipment";
+      input("orderPlacedAt").value = toDateTimeInput(new Date());
+      updateCharge();
+      setMessage("", false);
+    }
+
+    function loadShipment(id) {
+      try {
+        const shipment = getShipments()[id];
+        if (!shipment) return;
+        input("trackingId").value = id;
+        input("trackingId").readOnly = true;
+        input("orderId").value = shipment.orderId || "";
+        input("status").value = shipment.status;
+        input("delayMessage").value = shipment.delayMessage || "";
+        input("delayMessageEnabled").value = shipment.delayMessageEnabled === false ? "no" : "yes";
+        input("deliveryOption").value = shipment.deliveryOption === "fast" ? "fast" : "standard";
+        input("buyerName").value = shipment.buyerName || "";
+        input("customerName").value = shipment.customerName || "";
+        input("customerPhone").value = shipment.customerPhone || "";
+        input("sellerName").value = shipment.sellerName || "";
+        input("orderItem").value = shipment.orderItem || "";
+        input("itemVerified").value = shipment.itemVerified === true ? "yes" : "no";
+        input("origin").value = shipment.origin;
+        input("destination").value = shipment.destination;
+        input("deliveryAddress").value = shipment.deliveryAddress || "";
+        input("sellerAddress").value = shipment.sellerAddress || "";
+        populateMilestoneDates(shipment);
+        input("eta").value = shipment.eta;
+        input("service").value = shipment.service;
+        const weightFromService = typeof shipment.service === "string"
+          ? shipment.service.match(/([\d.]+)\s*kg/i)
+          : null;
+        input("weight").value = shipment.weight || (weightFromService ? weightFromService[1] : "");
+        input("insurance").checked = shipment.insuranceIncluded === true;
+        updateCharge();
+        input("formTitle").textContent = "Update " + id;
+        input("saveButton").textContent = "Save update";
+        setMessage("Edit the milestone dates and times, then save.", false);
+      } catch (error) {
+        setMessage(error.message, true);
+      }
+    }
+
+    function renderShipments() {
+      const list = input("shipmentList");
+      list.replaceChildren();
+      const shipments = getShipments();
+      const ids = Object.keys(shipments).sort();
+      if (!ids.length) {
+        const empty = document.createElement("p");
+        empty.className = "hint";
+        empty.textContent = "No shipments saved yet.";
+        list.appendChild(empty);
+        return;
+      }
+      ids.forEach(id => {
+        const row = document.createElement("div");
+        row.className = "shipment-item";
+        const details = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = id;
+        const subtitle = document.createElement("small");
+        const shipment = shipments[id];
+        const shipmentCharge = Number.isFinite(shipment.totalCharge)
+          ? shipment.totalCharge
+          : getShipmentCharge(shipment);
+        const charge = shipmentCharge !== null
+          ? " · " + currencyFormatter.format(shipmentCharge)
+          : "";
+        subtitle.textContent = shipments[id].status + " · "
+          + getDeliveryOptionLabel(shipment.deliveryOption) + " · "
+          + shipments[id].destination + charge;
+        details.append(title, subtitle);
+        if (typeof shipment.status === "string" && shipment.status.toLowerCase().includes("delay")) {
+          const delayMessage = document.createElement("small");
+          delayMessage.className = "shipment-delay-message";
+          delayMessage.textContent = "Delayed message: " + (
+            shipment.delayMessage || "Your shipment is delayed. Please check back for updates."
+          );
+          details.appendChild(delayMessage);
+        }
+        const actions = document.createElement("div");
+        actions.className = "shipment-actions";
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.textContent = "Edit";
+        edit.addEventListener("click", () => loadShipment(id));
+        const receipt = document.createElement("button");
+        receipt.type = "button";
+        receipt.className = "secondary";
+        receipt.textContent = "Receipt";
+        receipt.addEventListener("click", () => showReceipt(id));
+        actions.append(edit, receipt);
+        row.append(details, actions);
+        list.appendChild(row);
+      });
+    }
+
+    function showReceipt(id) {
+      try {
+        const shipment = getShipments()[id];
+        if (!shipment) {
+          setMessage("Could not find shipment " + id + " for the receipt.", true);
+          return;
+        }
+        const setReceiptText = (elementId, value) => {
+          input(elementId).textContent = value || "Not provided";
+        };
+        const formatReceiptMoney = value => Number.isFinite(value)
+          ? currencyFormatter.format(value)
+          : "Not available";
+        const courierCharge = getShipmentCharge(shipment);
+        const insuranceCharge = Number.isFinite(shipment.insuranceCharge)
+          ? shipment.insuranceCharge
+          : 0;
+        const totalCharge = Number.isFinite(shipment.totalCharge)
+          ? shipment.totalCharge
+          : courierCharge === null
+            ? null
+            : courierCharge + insuranceCharge;
+        const weightFromService = typeof shipment.service === "string"
+          ? shipment.service.match(/([\d.]+)\s*kg/i)
+          : null;
+        const weight = Number.isFinite(shipment.weight)
+          ? shipment.weight + " kg"
+          : weightFromService
+            ? weightFromService[1] + " kg"
+            : "Not provided";
+
+        setReceiptText("receiptTrackingId", id);
+        setReceiptText("receiptOrderId", shipment.orderId);
+        setReceiptText("receiptSellerName", shipment.sellerName);
+        setReceiptText("receiptSellerAddress", shipment.sellerAddress);
+        setReceiptText("receiptRecipient", shipment.buyerName);
+        setReceiptText("receiptDeliveryAddress", shipment.deliveryAddress);
+        setReceiptText("receiptCustomerName", shipment.customerName);
+        setReceiptText("receiptCustomerPhone", shipment.customerPhone);
+        setReceiptText("receiptOrderItem", shipment.orderItem);
+        setReceiptText("receiptItemVerified", shipment.itemVerified === true ? "Yes" : "No");
+        setReceiptText("receiptStatus", shipment.status);
+        setReceiptText("receiptEta", shipment.eta);
+        setReceiptText("receiptService",
+          getDeliveryOptionLabel(shipment.deliveryOption) + " · " + (shipment.service || "Not provided")
+        );
+        setReceiptText("receiptWeight", weight);
+        setReceiptText("receiptRoute", (shipment.origin || "Not provided") + " → " + (shipment.destination || "Not provided"));
+        setReceiptText("receiptCourierCharge", formatReceiptMoney(courierCharge));
+        setReceiptText("receiptInsuranceCharge", formatReceiptMoney(insuranceCharge));
+        setReceiptText("receiptTotal", formatReceiptMoney(totalCharge));
+        JsBarcode(input("receiptBarcode"), id, {
+          format: "CODE128",
+          lineColor: "#0f172a",
+          width: 2,
+          height: 64,
+          displayValue: false,
+          margin: 10
+        });
+        input("receiptPanel").hidden = false;
+        setMessage("Receipt ready. Use Print / Save as PDF to print it or save it as a PDF.", false);
+        input("receiptPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (error) {
+        setMessage(error.message || "Could not generate the shipment receipt.", true);
+      }
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      try {
+        const shipments = getShipments();
+        let id = input("trackingId").value.trim().toUpperCase();
+        const isNew = !id;
+        if (isNew) {
+          do {
+            id = "EK" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 90 + 10);
+          } while (shipments[id]);
+        }
+        if (!/^[A-Z0-9-]{3,32}$/.test(id)) {
+          setMessage("Tracking ID must be 3–32 letters, numbers, or hyphens.", true);
+          return;
+        }
+        if (isNew && shipments[id]) {
+          setMessage("That tracking ID already exists. Choose another ID.", true);
+          return;
+        }
+
+        const weight = Number(input("weight").value);
+        const customerPhone = input("customerPhone").value.trim();
+        if (!/^[0-9+() -]{7,20}$/.test(customerPhone)) {
+          setMessage("Enter a valid phone number using 7–20 digits, spaces, or +()-.", true);
+          return;
+        }
+        if (!Number.isFinite(weight) || weight <= 0) {
+          setMessage("Enter a package weight greater than zero.", true);
+          return;
+        }
+        const deliveryOption = input("deliveryOption").value;
+        const ratePerKg = deliveryOption === "fast" ? FAST_RATE_PER_KG : RATE_PER_KG;
+        const calculatedCharge = weight * ratePerKg;
+        const insuranceIncluded = input("insurance").checked;
+        const insuranceAmount = insuranceIncluded ? weight * INSURANCE_RATE_PER_KG : 0;
+        const totalAmount = calculatedCharge + insuranceAmount;
+        if (!Number.isFinite(totalAmount)) {
+          setMessage("Enter a smaller package weight.", true);
+          return;
+        }
+        const charge = Number(calculatedCharge.toFixed(2));
+        const insuranceCharge = Number(insuranceAmount.toFixed(2));
+        const totalCharge = Number(totalAmount.toFixed(2));
+        const orderPlacedDateTime = new Date(input("orderPlacedAt").value);
+        if (!Number.isFinite(orderPlacedDateTime.getTime())) {
+          setMessage("Enter a valid order placed date and time.", true);
+          return;
+        }
+        const milestoneDates = collectMilestoneDates(orderPlacedDateTime);
+        if (milestoneDates === null) return;
+        const currentMilestoneIndex = statusSteps[input("status").value] - 1;
+        let lastMilestoneTime = 0;
+        for (const [index, milestone] of EkartShipments.milestones.entries()) {
+          const value = milestoneDates[milestone.id];
+          if (index <= currentMilestoneIndex && !value) {
+            setMessage("Enter the date and time for " + milestone.label + " and each earlier milestone.", true);
+            return;
+          }
+          if (!value) continue;
+          const milestoneTime = new Date(value).getTime();
+          if (milestoneTime < lastMilestoneTime) {
+            setMessage("Milestone dates and times must follow the displayed shipment order.", true);
+            return;
+          }
+          lastMilestoneTime = milestoneTime;
+        }
+        const status = input("status").value;
+        shipments[id] = {
+          status,
+          orderId: input("orderId").value.trim(),
+          delayMessage: input("delayMessage").value.trim(),
+          delayMessageEnabled: input("delayMessageEnabled").value === "yes",
+          badgeClass: status === "Delivered" ? "delivered" : status === "Delayed" ? "exception" : "transit",
+          step: statusSteps[status],
+          buyerName: input("buyerName").value.trim(),
+          customerName: input("customerName").value.trim(),
+          customerPhone,
+          sellerName: input("sellerName").value.trim(),
+          orderItem: input("orderItem").value.trim(),
+          itemVerified: input("itemVerified").value === "yes",
+          eta: input("eta").value.trim(),
+          origin: input("origin").value.trim(),
+          destination: input("destination").value.trim(),
+          deliveryAddress: input("deliveryAddress").value.trim(),
+          sellerAddress: input("sellerAddress").value.trim(),
+          service: input("service").value.trim(),
+          deliveryOption,
+          ratePerKg,
+          weight,
+          charge,
+          insuranceIncluded,
+          insuranceCharge,
+          totalCharge,
+          orderPlacedAt: orderPlacedDateTime.toISOString(),
+          milestoneDates
+        };
+        EkartShipments.save(shipments);
+        loadShipment(id);
+        setMessage("Saved " + id + ". It is now available on the public tracker in this browser.", false);
+        renderShipments();
+      } catch (error) {
+        setMessage(error.message || "Could not save this shipment.", true);
+      }
+    });
+
+    input("weight").addEventListener("input", updateCharge);
+    input("deliveryOption").addEventListener("change", updateCharge);
+    input("insurance").addEventListener("change", updateCharge);
+    input("clearButton").addEventListener("click", resetForm);
+    input("printReceiptButton").addEventListener("click", () => window.print());
+    input("logoutButton").addEventListener("click", () => {
+      sessionStorage.removeItem("ekartAdminAuthenticated");
+      window.location.replace("admin-login.html");
+    });
+    input("orderPlacedAt").value = toDateTimeInput(new Date());
+    try {
+      renderShipments();
+    } catch (error) {
+      setMessage(error.message, true);
+    }
+    window.addEventListener("storage", event => {
+      if (event.key !== "ekartCourierShipments") return;
+      try {
+        renderShipments();
+      } catch (error) {
+        setMessage(error.message, true);
+      }
+    });
+  </script>
+</body>
+</html>
